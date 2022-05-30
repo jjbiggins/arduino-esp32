@@ -20,10 +20,10 @@ def merge_objects(versions, obj):
     for o in obj:
         name = o['name'].encode('ascii')
         ver = o['version'].encode('ascii')
-        if not name in versions:
+        if name not in versions:
             print("found new object, {0}".format(name), file=sys.stderr)
             versions[name] = {}
-        if not ver in versions[name]:
+        if ver not in versions[name]:
             print("found new version {0} for object {1}".format(ver, name), file=sys.stderr)
             versions[name][ver] = o
     return versions
@@ -34,16 +34,16 @@ def pkgVersionNormalized(versionString):
 
     verStr = str(versionString)
     verParts = re.split('\.|-rc', verStr, flags=re.IGNORECASE)
-    
+
     if len(verParts) == 3:
         if (sys.version_info > (3, 0)): # Python 3
-            verStr = str(versionString) + '-rc' + str(sys.maxsize)
+            verStr = f'{str(versionString)}-rc{str(sys.maxsize)}'
         else: # Python 2
-            verStr = str(versionString) + '-rc' + str(sys.maxint)
-        
+            verStr = f'{str(versionString)}-rc{str(sys.maxint)}'
+
     elif len(verParts) != 4:
         print("pkgVersionNormalized WARNING: unexpected version format: {0})".format(verStr), file=sys.stderr)
-        
+
     return verStr
 
 

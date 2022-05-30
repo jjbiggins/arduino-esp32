@@ -47,7 +47,7 @@ PROGRESS = False
 ## A value under 0 represents a 'halt'.
 ## A value at 1 or bigger represents 100%
 def update_progress(progress):
-  if (PROGRESS):
+  if PROGRESS:
     barLength = 60 # Modify this to change the length of the progress bar
     status = ""
     if isinstance(progress, int):
@@ -64,10 +64,10 @@ def update_progress(progress):
     block = int(round(barLength*progress))
     text = "\rUploading: [{0}] {1}% {2}".format( "="*block + " "*(barLength-block), int(progress*100), status)
     sys.stderr.write(text)
-    sys.stderr.flush()
   else:
     sys.stderr.write('.')
-    sys.stderr.flush()
+
+  sys.stderr.flush()
 
 def serve(remoteAddr, localAddr, remotePort, localPort, password, filename, command = FLASH):
   # Create a TCP/IP socket
@@ -82,16 +82,15 @@ def serve(remoteAddr, localAddr, remotePort, localPort, password, filename, comm
     return 1
 
   content_size = os.path.getsize(filename)
-  f = open(filename,'rb')
-  file_md5 = hashlib.md5(f.read()).hexdigest()
-  f.close()
+  with open(filename,'rb') as f:
+    file_md5 = hashlib.md5(f.read()).hexdigest()
   logging.info('Upload size: %d', content_size)
   message = '%d %d %d %s\n' % (command, localPort, content_size, file_md5)
 
   # Wait for a connection
   inv_trys = 0
   data = ''
-  msg = 'Sending invitation to %s ' % (remoteAddr)
+  msg = f'Sending invitation to {remoteAddr} '
   sys.stderr.write(msg)
   sys.stderr.flush()
   while (inv_trys < 10):
@@ -120,12 +119,12 @@ def serve(remoteAddr, localAddr, remotePort, localPort, password, filename, comm
     logging.error('No response from the ESP')
     return 1
   if (data != "OK"):
-    if(data.startswith('AUTH')):
+    if (data.startswith('AUTH')):
       nonce = data.split()[1]
       cnonce_text = '%s%u%s%s' % (filename, content_size, file_md5, remoteAddr)
       cnonce = hashlib.md5(cnonce_text.encode()).hexdigest()
       passmd5 = hashlib.md5(password.encode()).hexdigest()
-      result_text = '%s:%s:%s' % (passmd5 ,nonce, cnonce)
+      result_text = f'{passmd5}:{nonce}:{cnonce}'
       result = hashlib.md5(result_text.encode()).hexdigest()
       sys.stderr.write('Authenticating...')
       sys.stderr.flush()
@@ -323,10 +322,7 @@ def parser(unparsed_args):
 
 def main(args):
   options = parser(args)
-  loglevel = logging.WARNING
-  if (options.debug):
-    loglevel = logging.DEBUG
-
+  loglevel = logging.DEBUG if options.debug else logging.WARNING
   logging.basicConfig(level = loglevel, format = '%(asctime)-8s [%(levelname)s]: %(message)s', datefmt = '%H:%M:%S')
   logging.debug("Options: %s", str(options))
 
@@ -336,7 +332,7 @@ def main(args):
 
   global TIMEOUT
   TIMEOUT = options.timeout
-  
+
   if (not options.esp_ip or not options.image):
     logging.critical("Not enough arguments.")
     return 1

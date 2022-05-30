@@ -22,6 +22,7 @@ kinds of creative coding, interactive objects, spaces or physical experiences.
 http://arduino.cc/en/Reference/HomePage
 """
 
+
 # Extends: https://github.com/platformio/platform-espressif32/blob/develop/builder/main.py
 
 from os.path import join
@@ -38,6 +39,6 @@ SConscript(
         .PioPlatform()
         .get_package_dir("framework-arduinoespressif32"),
         "tools",
-        "platformio-build-%s.py" % build_mcu,
+        f"platformio-build-{build_mcu}.py",
     )
 )
