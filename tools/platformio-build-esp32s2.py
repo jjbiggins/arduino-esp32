@@ -22,6 +22,7 @@ kinds of creative coding, interactive objects, spaces or physical experiences.
 http://arduino.cc/en/Reference/HomePage
 """
 
+
 # Extends: https://github.com/platformio/platform-espressif32/blob/develop/builder/main.py
 
 from os.path import abspath, basename, isdir, isfile, join
@@ -334,12 +335,6 @@ env.Append(
     ],
 )
 
-#
-# Target: Build Core Library
-#
-
-libs = []
-
 variants_dir = join(FRAMEWORK_DIR, "variants")
 
 if "build.variants_dir" in env.BoardConfig():
@@ -358,10 +353,12 @@ if "build.variant" in env.BoardConfig():
 
 envsafe = env.Clone()
 
-libs.append(envsafe.BuildLibrary(
-    join("$BUILD_DIR", "FrameworkArduino"),
-    join(FRAMEWORK_DIR, "cores", env.BoardConfig().get("build.core"))
-))
+libs = [
+    envsafe.BuildLibrary(
+        join("$BUILD_DIR", "FrameworkArduino"),
+        join(FRAMEWORK_DIR, "cores", env.BoardConfig().get("build.core")),
+    )
+]
 
 env.Prepend(LIBS=libs)
 

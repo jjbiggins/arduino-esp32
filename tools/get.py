@@ -6,6 +6,7 @@ This script will download and extract required tools into the current directory.
 Tools list is obtained from package/package_esp8266com_index.template.json file.
 """
 
+
 from __future__ import print_function
 
 __author__ = "Ivan Grokhotkov"
@@ -36,7 +37,7 @@ if 'Windows' in platform.system():
     import requests
 
 current_dir = os.path.dirname(os.path.realpath(unicode(__file__)))
-dist_dir = current_dir + '/dist/'
+dist_dir = f'{current_dir}/dist/'
 
 def sha256sum(filename, blocksize=65536):
     hash = hashlib.sha256()
@@ -74,7 +75,7 @@ def unpack(filename, destination):
         raise NotImplementedError('Unsupported archive type')
 
     # a little trick to rename tool directories so they don't contain version number
-    rename_to = re.match(r'^([a-z][^\-]*\-*)+', dirname).group(0).strip('-')
+    rename_to = re.match(r'^([a-z][^\-]*\-*)+', dirname)[0].strip('-')
     if rename_to != dirname:
         print('Renaming {0} to {1} ...'.format(dirname, rename_to))
         if os.path.isdir(rename_to):
@@ -89,8 +90,7 @@ def download_file(url,filename):
     ctx.verify_mode = ssl.CERT_NONE
     with contextlib.closing(urlopen(url,context=ctx)) as fp:
         block_size = 1024 * 8
-        block = fp.read(block_size)
-        if block:
+        if block := fp.read(block_size):
             with open(filename,'wb') as out_file:
                 out_file.write(block)
                 while True:
@@ -107,7 +107,7 @@ def get_tool(tool):
     local_path = dist_dir + archive_name
     url = tool['url']
     if not os.path.isfile(local_path):
-        print('Downloading ' + archive_name + ' ...')
+        print(f'Downloading {archive_name} ...')
         sys.stdout.flush()
         if 'CYGWIN_NT' in sys_name:
             import ssl
@@ -117,17 +117,14 @@ def get_tool(tool):
             urlretrieve(url, local_path, report_progress, context=ctx)
         elif 'Windows' in sys_name:
             r = requests.get(url)
-            f = open(local_path, 'wb')
-            f.write(r.content)
-            f.close()
+            with open(local_path, 'wb') as f:
+                f.write(r.content)
+        elif is_ci := os.environ.get('GITHUB_WORKSPACE'):
+            download_file(url, local_path)
         else:
-            is_ci = os.environ.get('GITHUB_WORKSPACE');
-            if is_ci:
-                download_file(url, local_path)
-            else:
-                urlretrieve(url, local_path, report_progress)
-                sys.stdout.write("\rDone\n")
-                sys.stdout.flush()
+            urlretrieve(url, local_path, report_progress)
+            sys.stdout.write("\rDone\n")
+            sys.stdout.flush()
     else:
         print('Tool {0} already downloaded'.format(archive_name))
         sys.stdout.flush()
@@ -138,7 +135,7 @@ def load_tools_list(filename, platform):
     tools_to_download = []
     for t in tools_info:
         tool_platform = [p for p in t['systems'] if p['host'] == platform]
-        if len(tool_platform) == 0:
+        if not tool_platform:
             continue
         tools_to_download.append(tool_platform[0])
     return tools_to_download
@@ -148,9 +145,7 @@ def identify_platform():
                               'Linux'   : {32 : 'i686-pc-linux-gnu',   64 : 'x86_64-pc-linux-gnu'},
                               'LinuxARM': {32 : 'arm-linux-gnueabihf', 64 : 'aarch64-linux-gnu'},
                               'Windows' : {32 : 'i686-mingw32',        64 : 'i686-mingw32'}}
-    bits = 32
-    if sys.maxsize > 2**32:
-        bits = 64
+    bits = 64 if sys.maxsize > 2**32 else 32
     sys_name = platform.system()
     sys_platform = platform.platform()
     if 'Linux' in sys_name and (sys_platform.find('arm') > 0 or sys_platform.find('aarch64') > 0):
@@ -163,7 +158,11 @@ def identify_platform():
 if __name__ == '__main__':
     identified_platform = identify_platform()
     print('Platform: {0}'.format(identified_platform))
-    tools_to_download = load_tools_list(current_dir + '/../package/package_esp32_index.template.json', identified_platform)
+    tools_to_download = load_tools_list(
+        f'{current_dir}/../package/package_esp32_index.template.json',
+        identified_platform,
+    )
+
     mkdir_p(dist_dir)
     for tool in tools_to_download:
         get_tool(tool)
